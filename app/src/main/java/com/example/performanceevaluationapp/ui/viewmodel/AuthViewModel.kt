@@ -24,6 +24,9 @@ class AuthViewModel : ViewModel() {
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error
 
+    private val _successMessage = MutableStateFlow<String?>(null)
+    val successMessage: StateFlow<String?> = _successMessage
+
     init {
         checkUserStatus() // This is still good for checking on app start
     }
@@ -55,7 +58,6 @@ class AuthViewModel : ViewModel() {
             })
     }
 
-    // --- MODIFIED LOGIN FUNCTION ---
     // It now takes a success callback that provides the user's role.
     fun login(email: String, password: String, onLoginSuccess: (role: String) -> Unit) {
         viewModelScope.launch {
@@ -72,8 +74,8 @@ class AuthViewModel : ViewModel() {
                 else _authState.value = AuthState.AuthenticatedTrainer
 
                 // NOW, trigger the navigation via the callback
+                _successMessage.value = "Login successful!"
                 onLoginSuccess(role)
-
                 _error.value = null
             } catch (e: Exception) {
                 _error.value = e.message ?: "An unknown error occurred."
@@ -81,7 +83,6 @@ class AuthViewModel : ViewModel() {
         }
     }
 
-    // --- MODIFIED SIGNUP FUNCTION ---
     // It also takes a success callback.
     fun signup(email: String, password: String, role: String, onSignupSuccess: () -> Unit) {
         viewModelScope.launch {
@@ -97,8 +98,8 @@ class AuthViewModel : ViewModel() {
                 else _authState.value = AuthState.AuthenticatedTrainer
 
                 // Trigger navigation
+                _successMessage.value = "Account created successfully!"
                 onSignupSuccess()
-
                 _error.value = null
             } catch (e: Exception) {
                 _error.value = e.message ?: "An unknown error occurred."
@@ -108,11 +109,16 @@ class AuthViewModel : ViewModel() {
 
     fun logout() {
         auth.signOut()
+        _successMessage.value = "Logged out successfully."
         _authState.value = AuthState.Unauthenticated
     }
 
     fun clearError() {
         _error.value = null
+    }
+
+    fun clearSuccessMessage() {
+        _successMessage.value = null
     }
 }
 

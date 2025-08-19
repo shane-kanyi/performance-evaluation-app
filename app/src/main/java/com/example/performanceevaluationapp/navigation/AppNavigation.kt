@@ -1,5 +1,6 @@
 package com.example.performanceevaluationapp.navigation
 
+import android.widget.Toast
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -13,12 +14,15 @@ import androidx.navigation.navArgument
 import com.example.performanceevaluationapp.ui.screens.*
 import com.example.performanceevaluationapp.ui.viewmodel.AuthState
 import com.example.performanceevaluationapp.ui.viewmodel.AuthViewModel
+import androidx.compose.ui.platform.LocalContext
 
 @Composable
 fun AppNavigation() {
     val navController = rememberNavController()
     val authViewModel: AuthViewModel = viewModel()
     val authState by authViewModel.authState.collectAsState()
+    val successMessage by authViewModel.successMessage.collectAsState()
+    val context = LocalContext.current
 
     // This listener is our single source of truth for auth-based navigation
     LaunchedEffect(authState) {
@@ -44,6 +48,16 @@ fun AppNavigation() {
                 navController.navigate(Screen.Splash.route) {
                     popUpTo(0)
                 }
+            }
+        }
+    }
+
+    LaunchedEffect(successMessage) {
+        successMessage?.let {
+            // We only show the logout message here. Login/Signup are handled by their own screens.
+            if (it.contains("Logged out")) {
+                Toast.makeText(context, it, Toast.LENGTH_SHORT).show()
+                authViewModel.clearSuccessMessage()
             }
         }
     }

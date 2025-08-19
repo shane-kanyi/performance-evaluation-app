@@ -29,6 +29,14 @@ fun SignupScreen(navController: NavController, authViewModel: AuthViewModel = vi
 
     val context = LocalContext.current
     val error by authViewModel.error.collectAsState()
+    val successMessage by authViewModel.successMessage.collectAsState()
+
+    LaunchedEffect(successMessage) {
+        successMessage?.let {
+            Toast.makeText(context, it, Toast.LENGTH_SHORT).show()
+            authViewModel.clearSuccessMessage() // Reset after showing
+        }
+    }
 
     LaunchedEffect(error) {
         error?.let {
