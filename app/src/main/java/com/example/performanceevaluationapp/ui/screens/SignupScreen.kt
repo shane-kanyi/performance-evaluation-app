@@ -13,6 +13,7 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import com.example.performanceevaluationapp.navigation.Screen
 import com.example.performanceevaluationapp.ui.viewmodel.AuthViewModel
 import java.util.Locale
 
@@ -22,9 +23,9 @@ fun SignupScreen(navController: NavController, authViewModel: AuthViewModel = vi
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var selectedRole by remember { mutableStateOf("trainer") }
-    // The data values remain lowercase for consistency in the database
     val roles = listOf("trainer", "admin")
     var expanded by remember { mutableStateOf(false) }
+    var isLoading by remember { mutableStateOf(false) } // To show loading indicator on button
 
     val context = LocalContext.current
     val error by authViewModel.error.collectAsState()
@@ -32,6 +33,7 @@ fun SignupScreen(navController: NavController, authViewModel: AuthViewModel = vi
     LaunchedEffect(error) {
         error?.let {
             Toast.makeText(context, it, Toast.LENGTH_LONG).show()
+            isLoading = false
             authViewModel.clearError()
         }
     }
@@ -43,35 +45,20 @@ fun SignupScreen(navController: NavController, authViewModel: AuthViewModel = vi
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // ... (No changes to TextFields for email/password)
         Text("Sign Up", style = MaterialTheme.typography.headlineMedium)
+        // ... (Text fields are the same, just add enabled = !isLoading)
         Spacer(modifier = Modifier.height(16.dp))
 
-        OutlinedTextField(
-            value = email,
-            onValueChange = { email = it },
-            label = { Text("Email") },
-            modifier = Modifier.fillMaxWidth()
-        )
+        OutlinedTextField(value = email, onValueChange = { email = it }, label = { Text("Email") }, modifier = Modifier.fillMaxWidth(), enabled = !isLoading)
         Spacer(modifier = Modifier.height(8.dp))
-
-        OutlinedTextField(
-            value = password,
-            onValueChange = { password = it },
-            label = { Text("Password") },
-            visualTransformation = PasswordVisualTransformation(),
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-            modifier = Modifier.fillMaxWidth()
-        )
+        OutlinedTextField(value = password, onValueChange = { password = it }, label = { Text("Password") }, visualTransformation = PasswordVisualTransformation(), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password), modifier = Modifier.fillMaxWidth(), enabled = !isLoading)
         Spacer(modifier = Modifier.height(16.dp))
-
 
         ExposedDropdownMenuBox(
             expanded = expanded,
-            onExpandedChange = { expanded = !expanded }
+            onExpandedChange = { if (!isLoading) expanded = !expanded }
         ) {
             OutlinedTextField(
-                // We display the capitalized version to the user
                 value = selectedRole.replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString() },
                 onValueChange = {},
                 readOnly = true,
@@ -81,16 +68,11 @@ fun SignupScreen(navController: NavController, authViewModel: AuthViewModel = vi
                     .menuAnchor(MenuAnchorType.PrimaryNotEditable)
                     .fillMaxWidth()
             )
-            ExposedDropdownMenu(
-                expanded = expanded,
-                onDismissRequest = { expanded = false }
-            ) {
+            ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
                 roles.forEach { role ->
                     DropdownMenuItem(
-                        // We also display the capitalized version in the dropdown list
                         text = { Text(role.replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString() }) },
                         onClick = {
-                            // But we store the original lowercase value
                             selectedRole = role
                             expanded = false
                         }
@@ -101,13 +83,33 @@ fun SignupScreen(navController: NavController, authViewModel: AuthViewModel = vi
         Spacer(modifier = Modifier.height(16.dp))
 
         Button(
-            onClick = { authViewModel.signup(email, password, selectedRole) },
-            modifier = Modifier.fillMaxWidth()
+            onClick = {
+                isLoading = true
+                // --- SAME CALLBACK PATTERN HERE ---
+                authViewModel.signup(email, password, selectedRole) {
+                    val destination = if (selectedRole == "admin") Screen.AdminDashboard.route else Screen.TrainerDashboard.route
+                    navController.navigate(destination) {
+                        popUpTo(Screen.Signup.route) { inclusive = true }
+                        // Also pop login in case user came from there
+                        popUpTo(Screen.Login.route) { inclusive = true }
+                    }
+                    isLoading = false
+                }
+            },
+            modifier = Modifier.fillMaxWidth(),
+            enabled = !isLoading
         ) {
-            Text("Sign Up")
+            if (isLoading) {
+                CircularProgressIndicator(modifier = Modifier.size(24.dp), color = MaterialTheme.colorScheme.onPrimary)
+            } else {
+                Text("Sign Up")
+            }
         }
         Spacer(modifier = Modifier.height(8.dp))
-        TextButton(onClick = { navController.popBackStack() }) {
+        TextButton(
+            onClick = { navController.popBackStack() },
+            enabled = !isLoading
+        ) {
             Text("Already have an account? Login")
         }
     }

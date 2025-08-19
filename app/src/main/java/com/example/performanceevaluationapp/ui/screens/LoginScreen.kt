@@ -20,14 +20,15 @@ import com.example.performanceevaluationapp.ui.viewmodel.AuthViewModel
 fun LoginScreen(navController: NavController, authViewModel: AuthViewModel = viewModel()) {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
+    var isLoading by remember { mutableStateOf(false) } // To show loading indicator on button
     val context = LocalContext.current
     val error by authViewModel.error.collectAsState()
 
-    // Show a toast for any errors
     LaunchedEffect(error) {
         error?.let {
             Toast.makeText(context, it, Toast.LENGTH_LONG).show()
-            authViewModel.clearError() // Clear error after showing
+            isLoading = false // Stop loading on error
+            authViewModel.clearError()
         }
     }
 
@@ -45,7 +46,8 @@ fun LoginScreen(navController: NavController, authViewModel: AuthViewModel = vie
             value = email,
             onValueChange = { email = it },
             label = { Text("Email") },
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
+            enabled = !isLoading
         )
         Spacer(modifier = Modifier.height(8.dp))
 
@@ -55,19 +57,40 @@ fun LoginScreen(navController: NavController, authViewModel: AuthViewModel = vie
             label = { Text("Password") },
             visualTransformation = PasswordVisualTransformation(),
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
+            enabled = !isLoading
         )
         Spacer(modifier = Modifier.height(16.dp))
 
         Button(
-            onClick = { authViewModel.login(email, password) },
-            modifier = Modifier.fillMaxWidth()
+            onClick = {
+                isLoading = true
+                // --- THIS IS THE MAJOR CHANGE ---
+                // We pass a lambda function to be executed on success.
+                authViewModel.login(email, password) { role ->
+                    // This code runs ONLY after Firebase confirms a successful login.
+                    val destination = if (role == "admin") Screen.AdminDashboard.route else Screen.TrainerDashboard.route
+                    navController.navigate(destination) {
+                        popUpTo(Screen.Login.route) { inclusive = true }
+                    }
+                    isLoading = false
+                }
+            },
+            modifier = Modifier.fillMaxWidth(),
+            enabled = !isLoading
         ) {
-            Text("Login")
+            if (isLoading) {
+                CircularProgressIndicator(modifier = Modifier.size(24.dp), color = MaterialTheme.colorScheme.onPrimary)
+            } else {
+                Text("Login")
+            }
         }
         Spacer(modifier = Modifier.height(8.dp))
 
-        TextButton(onClick = { navController.navigate(Screen.Signup.route) }) {
+        TextButton(
+            onClick = { navController.navigate(Screen.Signup.route) },
+            enabled = !isLoading
+        ) {
             Text("Don't have an account? Sign Up")
         }
     }
