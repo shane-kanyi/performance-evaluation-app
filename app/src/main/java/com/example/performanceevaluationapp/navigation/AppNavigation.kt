@@ -20,29 +20,32 @@ fun AppNavigation() {
     val authViewModel: AuthViewModel = viewModel()
     val authState by authViewModel.authState.collectAsState()
 
-    // This listener now primarily handles global state changes like LOGOUT
-    // and the very initial app load.
+    // This is now the single source of truth for all auth-based navigation.
+    // It is always active and will react to any change.
     LaunchedEffect(authState) {
         when (authState) {
-            is AuthState.Unauthenticated -> {
-                // If we are unauthenticated, always go to Login and clear everything.
-                navController.navigate(Screen.Login.route) {
-                    popUpTo(0)
+            is AuthState.AuthenticatedAdmin -> {
+                navController.navigate(Screen.AdminDashboard.route) {
+                    popUpTo(navController.graph.startDestinationId) { inclusive = true }
                 }
             }
-            // Other cases are handled by the callbacks in the UI now.
-            else -> {}
+            is AuthState.AuthenticatedTrainer -> {
+                navController.navigate(Screen.TrainerDashboard.route) {
+                    popUpTo(navController.graph.startDestinationId) { inclusive = true }
+                }
+            }
+            is AuthState.Unauthenticated -> {
+                navController.navigate(Screen.Login.route) {
+                    popUpTo(navController.graph.startDestinationId) { inclusive = true }
+                }
+            }
+            // While loading, we stay on the splash screen
+            is AuthState.Loading -> {}
         }
     }
 
-    // Determine the start destination based on the initial auth state check.
-    val startDestination = when (authState) {
-        is AuthState.AuthenticatedAdmin -> Screen.AdminDashboard.route
-        is AuthState.AuthenticatedTrainer -> Screen.TrainerDashboard.route
-        else -> Screen.Splash.route // Default to splash to handle loading/unauthenticated
-    }
-
-    NavHost(navController = navController, startDestination = startDestination) {
+    // The startDestination is now ALWAYS the splash screen. This makes navigation predictable.
+    NavHost(navController = navController, startDestination = Screen.Splash.route) {
         composable(Screen.Splash.route) { SplashScreen() }
         composable(Screen.Login.route) { LoginScreen(navController = navController) }
         composable(Screen.Signup.route) { SignupScreen(navController = navController) }
