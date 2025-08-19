@@ -20,38 +20,53 @@ fun AppNavigation() {
     val authViewModel: AuthViewModel = viewModel()
     val authState by authViewModel.authState.collectAsState()
 
-    // This is now the single source of truth for all auth-based navigation.
-    // It is always active and will react to any change.
+    // This listener is our single source of truth for auth-based navigation
     LaunchedEffect(authState) {
         when (authState) {
             is AuthState.AuthenticatedAdmin -> {
                 navController.navigate(Screen.AdminDashboard.route) {
-                    popUpTo(navController.graph.startDestinationId) { inclusive = true }
+                    popUpTo(0)
                 }
             }
             is AuthState.AuthenticatedTrainer -> {
                 navController.navigate(Screen.TrainerDashboard.route) {
-                    popUpTo(navController.graph.startDestinationId) { inclusive = true }
+                    popUpTo(0)
                 }
             }
             is AuthState.Unauthenticated -> {
                 navController.navigate(Screen.Login.route) {
-                    popUpTo(navController.graph.startDestinationId) { inclusive = true }
+                    popUpTo(0)
                 }
             }
-            // While loading, we stay on the splash screen
-            is AuthState.Loading -> {}
+            is AuthState.Loading -> {
+                // While loading, we ensure we are on the splash screen
+                // This is useful if a logout happens.
+                navController.navigate(Screen.Splash.route) {
+                    popUpTo(0)
+                }
+            }
         }
     }
 
-    // The startDestination is now ALWAYS the splash screen. This makes navigation predictable.
+    // Always start at the splash screen. The LaunchedEffect above will handle redirection.
     NavHost(navController = navController, startDestination = Screen.Splash.route) {
-        composable(Screen.Splash.route) { SplashScreen() }
-        composable(Screen.Login.route) { LoginScreen(navController = navController) }
-        composable(Screen.Signup.route) { SignupScreen(navController = navController) }
-        composable(Screen.AdminDashboard.route) { AdminDashboardScreen(navController = navController) }
-        composable(Screen.TrainerDashboard.route) { TrainerDashboardScreen(navController = navController) }
-
+        // --- THIS IS THE CORRECTED LINE ---
+        composable(Screen.Splash.route) {
+            SplashScreen() // No longer passes navController
+        }
+        // --- THE REST OF THE FILE IS THE SAME ---
+        composable(Screen.Login.route) {
+            LoginScreen(navController = navController, authViewModel = authViewModel)
+        }
+        composable(Screen.Signup.route) {
+            SignupScreen(navController = navController, authViewModel = authViewModel)
+        }
+        composable(Screen.AdminDashboard.route) {
+            AdminDashboardScreen(navController = navController, authViewModel = authViewModel)
+        }
+        composable(Screen.TrainerDashboard.route) {
+            TrainerDashboardScreen(navController = navController, authViewModel = authViewModel)
+        }
         composable(
             route = Screen.SubmitEvaluation.route,
             arguments = listOf(
@@ -61,7 +76,6 @@ fun AppNavigation() {
         ) { backStackEntry ->
             SubmitEvaluationScreen(navController, backStackEntry.arguments?.getString("trainerId") ?: "", backStackEntry.arguments?.getString("trainerEmail") ?: "")
         }
-
         composable(
             route = Screen.GenerateReport.route,
             arguments = listOf(

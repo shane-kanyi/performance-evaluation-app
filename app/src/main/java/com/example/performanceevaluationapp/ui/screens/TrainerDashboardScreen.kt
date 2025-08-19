@@ -22,7 +22,8 @@ import java.util.*
 @Composable
 fun TrainerDashboardScreen(
     navController: NavController,
-    authViewModel: AuthViewModel = viewModel(),
+    // The AuthViewModel is now passed in as a parameter here as well.
+    authViewModel: AuthViewModel,
     dashboardViewModel: DashboardViewModel = viewModel()
 ) {
     val myEvaluations by dashboardViewModel.myEvaluations.collectAsState()
@@ -44,8 +45,11 @@ fun TrainerDashboardScreen(
             )
         }
     ) { paddingValues ->
+        // ... (The rest of the file is unchanged)
         LazyColumn(
-            modifier = Modifier.padding(paddingValues).padding(16.dp),
+            modifier = Modifier
+                .padding(paddingValues)
+                .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             item {
@@ -74,6 +78,7 @@ fun TrainerDashboardScreen(
     }
 }
 
+// ... (MyEvaluationCard and MyReportCard are unchanged)
 @Composable
 fun MyEvaluationCard(evaluation: Evaluation) {
     val date = SimpleDateFormat("dd MMM yyyy", Locale.getDefault()).format(Date(evaluation.date))

@@ -9,7 +9,6 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ExitToApp
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -26,15 +25,15 @@ import java.util.*
 @Composable
 fun AdminDashboardScreen(
     navController: NavController,
-    authViewModel: AuthViewModel = viewModel(),
+    // The AuthViewModel is now passed in as a parameter.
+    // It NO LONGER has a default value of viewModel().
+    authViewModel: AuthViewModel,
     dashboardViewModel: DashboardViewModel = viewModel()
 ) {
     val trainers by dashboardViewModel.trainers.collectAsState()
     val evaluations by dashboardViewModel.allEvaluations.collectAsState()
     var showDialog by remember { mutableStateOf(false) }
-    var selectedTrainer by remember { mutableStateOf<User?>(null) }
 
-    // Fetch data when the screen is first composed
     LaunchedEffect(Unit) {
         dashboardViewModel.fetchAdminData()
     }
@@ -44,6 +43,8 @@ fun AdminDashboardScreen(
             TopAppBar(
                 title = { Text("Admin Dashboard") },
                 actions = {
+                    // This IconButton now calls logout on the EXACT instance
+                    // that AppNavigation is observing.
                     IconButton(onClick = { authViewModel.logout() }) {
                         Icon(Icons.Default.ExitToApp, contentDescription = "Logout")
                     }
@@ -56,7 +57,10 @@ fun AdminDashboardScreen(
             }
         }
     ) { paddingValues ->
-        Column(modifier = Modifier.padding(paddingValues).padding(16.dp)) {
+        // ... (The rest of the file is unchanged)
+        Column(modifier = Modifier
+            .padding(paddingValues)
+            .padding(16.dp)) {
             Text("Recent Evaluations", style = MaterialTheme.typography.titleLarge)
             Spacer(modifier = Modifier.height(8.dp))
             EvaluationList(evaluations = evaluations, navController = navController)
@@ -74,7 +78,7 @@ fun AdminDashboardScreen(
         )
     }
 }
-
+// ... (EvaluationList, EvaluationCard, SelectTrainerDialog are unchanged)
 @Composable
 fun EvaluationList(evaluations: List<Evaluation>, navController: NavController) {
     if (evaluations.isEmpty()) {
@@ -83,7 +87,6 @@ fun EvaluationList(evaluations: List<Evaluation>, navController: NavController) 
         LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             items(evaluations) { evaluation ->
                 EvaluationCard(evaluation = evaluation) {
-                    // Only allow generating a report if one doesn't exist
                     if (!evaluation.hasReport) {
                         navController.navigate(
                             Screen.GenerateReport.createRoute(evaluation.evaluationId, evaluation.trainerId)
@@ -107,7 +110,7 @@ fun EvaluationCard(evaluation: Evaluation, onGenerateReportClicked: () -> Unit) 
             Spacer(modifier = Modifier.height(8.dp))
             Button(
                 onClick = onGenerateReportClicked,
-                enabled = !evaluation.hasReport // Disable if a report already exists
+                enabled = !evaluation.hasReport
             ) {
                 Text(if (evaluation.hasReport) "Report Generated" else "Generate Report")
             }
@@ -125,15 +128,19 @@ fun SelectTrainerDialog(
         onDismissRequest = onDismiss,
         title = { Text("Select a Trainer to Evaluate") },
         text = {
-            LazyColumn {
-                items(trainers) { trainer ->
-                    Text(
-                        text = trainer.email,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { onTrainerSelected(trainer) }
-                            .padding(vertical = 12.dp)
-                    )
+            if (trainers.isEmpty()) {
+                Text("No trainers found. Please create trainer accounts first.")
+            } else {
+                LazyColumn {
+                    items(trainers) { trainer ->
+                        Text(
+                            text = trainer.email,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { onTrainerSelected(trainer) }
+                                .padding(vertical = 12.dp)
+                        )
+                    }
                 }
             }
         },
