@@ -14,14 +14,15 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.example.performanceevaluationapp.ui.viewmodel.AuthViewModel
+import java.util.Locale
 
-// ADD THIS ANNOTATION HERE
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SignupScreen(navController: NavController, authViewModel: AuthViewModel = viewModel()) {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var selectedRole by remember { mutableStateOf("trainer") }
+    // The data values remain lowercase for consistency in the database
     val roles = listOf("trainer", "admin")
     var expanded by remember { mutableStateOf(false) }
 
@@ -42,6 +43,7 @@ fun SignupScreen(navController: NavController, authViewModel: AuthViewModel = vi
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
+        // ... (No changes to TextFields for email/password)
         Text("Sign Up", style = MaterialTheme.typography.headlineMedium)
         Spacer(modifier = Modifier.height(16.dp))
 
@@ -63,18 +65,21 @@ fun SignupScreen(navController: NavController, authViewModel: AuthViewModel = vi
         )
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Role Selector Dropdown
+
         ExposedDropdownMenuBox(
             expanded = expanded,
             onExpandedChange = { expanded = !expanded }
         ) {
             OutlinedTextField(
-                value = selectedRole,
+                // We display the capitalized version to the user
+                value = selectedRole.replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString() },
                 onValueChange = {},
                 readOnly = true,
                 label = { Text("Role") },
                 trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-                modifier = Modifier.menuAnchor().fillMaxWidth()
+                modifier = Modifier
+                    .menuAnchor(MenuAnchorType.PrimaryNotEditable)
+                    .fillMaxWidth()
             )
             ExposedDropdownMenu(
                 expanded = expanded,
@@ -82,8 +87,10 @@ fun SignupScreen(navController: NavController, authViewModel: AuthViewModel = vi
             ) {
                 roles.forEach { role ->
                     DropdownMenuItem(
-                        text = { Text(role) },
+                        // We also display the capitalized version in the dropdown list
+                        text = { Text(role.replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString() }) },
                         onClick = {
+                            // But we store the original lowercase value
                             selectedRole = role
                             expanded = false
                         }
